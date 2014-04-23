@@ -1,11 +1,8 @@
 package Structure;
 
 import com.hp.hpl.jena.ontology.*;
-import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
-import com.hp.hpl.jena.vocabulary.RDF;
-import com.sun.tools.jdi.EventQueueImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,15 +26,15 @@ public class ClassInfo {
     public static final String IS_A_RELATION_NAME = "istEin";
     public static final String INTERSECTION = "\u2229";
     public static final String UNION = "\u222A";
-    public static final String EQUIVALENT = "\u2261";
 
     private String name;
     private ArrayList<Relation> relationen = new ArrayList<Relation>();
     private ArrayList<Relation> attribute = new ArrayList<Relation>();
+    private String equivalentTo = null;
 
     public ClassInfo(OntClass oclass)
     {
-        OntClass sclass = oclass.getSuperClass();
+        //OntClass sclass = oclass.getSuperClass();
         name = oclass.getLocalName();
 
         addSuperclassRelation(oclass);
@@ -47,29 +44,27 @@ public class ClassInfo {
     private void addSuperclassRelation(OntClass oclass)
     {
         ArrayList<String> list = new ArrayList<String>();
-        if(oclass.isHierarchyRoot() && oclass.getLocalName().equals("Kraftfahrer"))
+        //If the class is an equivalent-To class or subclass of "Thing"
+        if(oclass.isHierarchyRoot())
         {
             List<OntClass> equis = oclass.listEquivalentClasses().toList();
             if(equis.size() > 0)
             {
-                //System.out.println("Equiv: " + getClassName(equis.get(0)));
-//                ArrayList<String> al = new ArrayList<String>();
-//                al.add(getClassName(equis.get(0)) + "(" + EQUIVALENT + ")");
-//                relationen.add(new Relation(IS_A_RELATION_NAME, al));
-
                 addSuperClass(equis.get(0), list);
+                equivalentTo = getClassName(equis.get(0));
                 relationen.add(new Relation(IS_A_RELATION_NAME, list));
                 return;
             }
         }
-
-        ExtendedIterator<OntClass> it = oclass.listSuperClasses(true);
-        OntClass sclass;
-        while(it.hasNext())
+        else
         {
-            sclass = it.next();
-            //System.out.println("Hat superklasse: " + ((sclass.isAnon())? "Anonym" : sclass.getClass().getSimpleName()));
-            addSuperClass(sclass, list);
+            ExtendedIterator<OntClass> it = oclass.listSuperClasses(true);
+            OntClass sclass;
+            while(it.hasNext())
+            {
+                sclass = it.next();
+                addSuperClass(sclass, list);
+            }
         }
 
         if(list.size() == 0)
@@ -78,6 +73,16 @@ public class ClassInfo {
         }
 
         relationen.add(new Relation(IS_A_RELATION_NAME, list));
+    }
+
+    public boolean hasEquivalentClass()
+    {
+        return (equivalentTo != null);
+    }
+
+    public String getEquivalentClass()
+    {
+        return equivalentTo;
     }
 
     private void addSuperClass(OntClass sclass, ArrayList<String> list)
@@ -97,6 +102,7 @@ public class ClassInfo {
                         }
                         else
                         {
+                            System.out.println(getClassName(o));
                             list.add(getClassName(o));
                         }
                     }
@@ -109,6 +115,8 @@ public class ClassInfo {
             }
             else
             {
+                String className = getClassName(sclass);
+                System.out.println("Class name: " + className);
                 list.add(getClassName(sclass));
             }
 
@@ -256,7 +264,7 @@ public class ClassInfo {
             {
                 if(p.isDatatypeProperty())
                 {
-                    System.out.println("Data Property for: " + oclass.getLocalName() + ": " + p.getLocalName());
+                    //System.out.println("Data Property for: " + oclass.getLocalName() + ": " + p.getLocalName());
                     addDataProperty(p);
                 }
                 else
@@ -289,7 +297,7 @@ public class ClassInfo {
             a.unit = "(Ohne Einheit)";
         }
 
-        System.out.println("Attribut: " + a.name + ", unit: " + a.unit);
+        //System.out.println("Attribut: " + a.name + ", unit: " + a.unit);
         attribute.add(a);
         return a;
     }

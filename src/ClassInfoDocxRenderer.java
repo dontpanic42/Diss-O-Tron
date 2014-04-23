@@ -11,6 +11,7 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
 
     public final static String INFINITY = "\u221E";
     private Settings.OutputSettings settings;
+    public static final String EQUIVALENT = "\u2261";
 
     public void render(OutputSettings settings, ArrayList<ClassInfo> list)
     {
@@ -42,7 +43,9 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
 
     private void renderTableHeader(TableDocumentTable table, ClassInfo info)
     {
-        table.setHeader(info.getName());
+        String header = info.getName();
+        if(info.hasEquivalentClass()) header += " (" + EQUIVALENT + " " + info.getEquivalentClass() + ")";
+        table.setHeader(header);
     }
 
     private void renderRelations(TableDocumentTable table, ClassInfo info)
