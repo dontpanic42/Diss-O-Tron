@@ -196,21 +196,33 @@ public class ClassInfo {
     private String getIntersectionString(IntersectionClass inters)
     {
         List<? extends OntClass> ops = inters.listOperands().toList();
-        if(ops.size() == 0)
-        {
-            return "";
-        }
-        if(ops.size() == 1)
-        {
-            return getClassName(ops.get(0));
-        }
-
-        String str = "";
         String name;
+        ArrayList<String> tmpNames = new ArrayList<String>();
         for(int i = 0; i < ops.size(); i++)
         {
             name = getClassName(ops.get(i));
-            if(i >= ops.size() - 1)
+            if(name != null)
+            {
+                tmpNames.add(name);
+            }
+        }
+
+        if(tmpNames.size() == 0)
+        {
+            return "";
+        }
+        if(tmpNames.size() == 1)
+        {
+            return tmpNames.get(0);
+        }
+
+        String str = "";
+
+        for(int i = 0; i < tmpNames.size(); i++)
+        {
+            name = tmpNames.get(i);
+
+            if(i >= tmpNames.size() - 1)
             {
                 str += name;
             }
@@ -240,6 +252,10 @@ public class ClassInfo {
         for(int i = 0; i < ops.size(); i++)
         {
             name = getClassName(ops.get(i));
+
+            if(name == null)
+                continue;
+
             if(i >= ops.size() - 1)
             {
                 str += name;
