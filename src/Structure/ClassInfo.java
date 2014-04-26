@@ -11,31 +11,98 @@ import java.util.List;
  * Created by daniel on 17.04.14.
  */
 public class ClassInfo {
-    public enum RestrictionType
-    {
-        ALL,
-        SOME,
-        MIN,
-        MAX,
-        EXACT,
-        LIT_VALUE,
-        NONE
-    }
+
 
     public static final String ROOT_CLASS_NAME = "Thing";
     public static final String IS_A_RELATION_NAME = "istEin";
     public static final String INTERSECTION = "\u2229";
     public static final String UNION = "\u222A";
+    public static final String ELEMENT_OF = "\u2208";
+    public static final String NOT = "\u00AC";
 
-    private String name;
-    private ArrayList<Relation> relationen = new ArrayList<Relation>();
-    private ArrayList<Relation> attribute = new ArrayList<Relation>();
-    private String equivalentTo = null;
+    public String name;
+    public ArrayList<Relation> relationen = new ArrayList<Relation>();
+    public ArrayList<Relation> attribute = new ArrayList<Relation>();
+    public String equivalentTo = null;
+
+    public ClassInfo()
+    {
+
+    }
+
+    public boolean hasProperty(OntProperty prop)
+    {
+        String name = prop.getLocalName();
+        if(prop.isObjectProperty())
+        {
+            for(Relation r : relationen)
+            {
+                if(r.name.equals(name))
+                    return true;
+            }
+        }
+        else if(prop.isDatatypeProperty())
+        {
+            for(Relation r : attribute)
+            {
+                if(r.name.equals(name))
+                    return true;
+            }
+        }
+
+        return false;
+    }
 
     public ClassInfo(OntClass oclass)
     {
         //OntClass sclass = oclass.getSuperClass();
         name = oclass.getLocalName();
+
+        if(name.equals("DanielsImaginäresAuto"))
+        {
+            System.out.println("..............");
+
+            for(OntClass o : oclass.listSuperClasses().toList())
+            {
+                System.out.println("Sup: " + o.getLocalName());
+                System.out.println("is u: " + o.isUnionClass());
+                System.out.println("is i: " + o.isIntersectionClass());
+
+                IntersectionClass i = o.asIntersectionClass();
+                System.out.println("i is r: " + i.isRestriction());
+
+                for(OntResource inst : i.listInstances().toList())
+                {
+                    System.out.println("Has instance: " + inst.getLocalName());
+                }
+
+                for(OntClass op: i.listOperands().toList())
+                {
+                    System.out.println("Has op: " + op.getLocalName());
+
+                    if(op.isAnon())
+                    {
+                        System.out.println("Anon has instances: " + op.listInstances().toList().size());
+                        System.out.println("Anon is restriction: " + op.isRestriction());
+                        System.out.println("Anon is op: " + op.asRestriction().getOnProperty().isObjectProperty());
+                        System.out.println("Anon is dp: " + op.asRestriction().getOnProperty().isDatatypeProperty());
+                        System.out.println("Anon r op on: " + op.asRestriction().getOnProperty().getLocalName());
+
+                        Restriction anonR = op.asRestriction();
+                        System.out.println("Is has Value restriction: " + anonR.isHasValueRestriction());
+                        HasValueRestriction hvr = anonR.asHasValueRestriction();
+                        System.out.println("HVR has instances: " + hvr.listInstances().toList().size());
+                        System.out.println(hvr.getHasValue().canAs(Individual.class));
+                        System.out.println(hvr.getHasValue().getClass().getSimpleName());
+
+                        Individual iv = hvr.getHasValue().as(Individual.class);
+                        System.out.println(iv.getLocalName());      //Eureka!
+                    }
+                }
+            }
+
+            System.out.println("..............");
+        }
 
         addSuperclassRelation(oclass);
         addProperties(oclass);
@@ -133,7 +200,13 @@ public class ClassInfo {
         }
         else if(r.getOnProperty().isObjectProperty())
         {
+            System.out.println("Object Property Restriction: " + r.getOnProperty().getLocalName());
             rel = addObjectProperty(r.getOnProperty());
+            System.out.println("Value: " + rel);
+        }
+        else
+        {
+            System.out.println("Is unknown restriction: " + r.getOnProperty().getLocalName());
         }
 
         if(rel != null)
@@ -163,15 +236,22 @@ public class ClassInfo {
             }
             else if(r.isHasValueRestriction())
             {
+                System.out.println("IS RESTRCTION");
                 RDFNode n = r.asHasValueRestriction().getHasValue();
-                if(n.isLiteral())
+                rel.restrictionType = RestrictionType.LIT_VALUE;
+                if(n.canAs(Individual.class))
                 {
-                    rel.restrictionType = RestrictionType.LIT_VALUE;
+                    System.out.println("IS INDIVIDUAL");
+                    rel.restrictionValue = "Individual[" + n.as(Individual.class).getLocalName() + "]";
+                }
+                else if(n.isLiteral())
+                {
                     rel.restrictionValue = n.asLiteral().getLexicalForm();
                 }
                 else
                 {
                     System.out.println("Has other restriction");
+                    rel.restrictionValue = "[ERROR: UNKNOWN]";
                 }
             }
         }
@@ -200,6 +280,12 @@ public class ClassInfo {
         ArrayList<String> tmpNames = new ArrayList<String>();
         for(int i = 0; i < ops.size(); i++)
         {
+            if(ops.get(i).isRestriction())
+            {
+                System.out.println(":::::Is restriction::::::");
+                addRestriction(ops.get(i).asRestriction());
+                continue;
+            }
             name = getClassName(ops.get(i));
             if(name != null)
             {
@@ -321,6 +407,15 @@ public class ClassInfo {
     private Relation addObjectProperty(OntProperty p)
     {
         ExtendedIterator<? extends OntResource> it = p.listRange();
+        //System.out.println("OP has range: " + p.listRange().toList().size());
+        ObjectProperty op = p.asObjectProperty();
+        System.out.println("OP has range: " + op.listRange().toList().size());
+        System.out.println(op.getRange());
+        System.out.println("Refering: " + op.listReferringRestrictions().toList().size());
+        System.out.println("Has iv: " + op.hasInverse());
+
+
+        //Standard
         ArrayList<String> list = new ArrayList<String>();
         while(it.hasNext())
         {
@@ -334,6 +429,21 @@ public class ClassInfo {
                 System.err.println("Error: expecting OntClass, got " + o.getClass().getSimpleName() + ": " + o.getLocalName());
             }
         }
+
+        //Infer range from inverse (->listDomain)
+//        if(list.size() == 0 && op.hasInverse())
+//        {
+//            System.out.println("Has inverse.");
+//            OntProperty inv = op.getInverse();
+//            for(OntResource o : inv.listDomain().toList())
+//            {
+//                System.out.println("Got inverse domain: " + o.getLocalName());
+//                if(o.isClass())
+//                {
+//                    list.add(getClassName(o.asClass()));
+//                }
+//            }
+//        }
 
         if(list.size() > 0)
         {
@@ -360,34 +470,7 @@ public class ClassInfo {
         return attribute;
     }
 
-    public class Relation
-    {
-        public String name;
-        public ArrayList<String> range;
-        public int cardinality = -1;
-        public RestrictionType restrictionType = RestrictionType.NONE;
-        public String restrictionValue;
 
-        public Relation()
-        {
 
-        }
 
-        public Relation(String name, ArrayList<String> range)
-        {
-            this.name = name;
-            this.range = range;
-        }
-
-        public Relation(String name, ArrayList<String> range, int cardinality)
-        {
-            this(name, range);
-            this.cardinality = cardinality;
-        }
-    }
-
-    public class Attribut extends Relation
-    {
-        public String unit;
-    }
 }

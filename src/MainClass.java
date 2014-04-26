@@ -47,6 +47,7 @@ public class MainClass {
                             progress.setIndeterminate();
                             progress.setTask("Schreibe Tabellen.");
 
+
                             try
                             {
                                 ClassInfoRenderer r = new ClassInfoDocxRenderer();

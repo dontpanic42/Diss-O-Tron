@@ -1,5 +1,8 @@
 import Settings.OutputSettings;
+import Structure.Attribut;
 import Structure.ClassInfo;
+import Structure.Relation;
+import Structure.RestrictionType;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -12,6 +15,9 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
     public final static String INFINITY = "\u221E";
     private Settings.OutputSettings settings;
     public static final String EQUIVALENT = "\u2261";
+    public static final String ELEMENT_OF = "\u2208";
+    public static final String GREATER_EQUAL = "≥";
+    public static final String LESSER_EQUAL = "≤";
 
     public void render(OutputSettings settings, ArrayList<ClassInfo> list)
     {
@@ -50,13 +56,13 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
 
     private void renderRelations(TableDocumentTable table, ClassInfo info)
     {
-        for(ClassInfo.Relation r : info.getRelations())
+        for(Relation r : info.getRelations())
         {
             ArrayList<String> col = new ArrayList<String>();
             col.add(null);      //Merged row header
             col.add(r.name);
             col.add(getRangeString(r));
-            col.add("");
+            col.add((r.restrictionType == RestrictionType.LIT_VALUE)? r.restrictionValue : "");
             col.add(getCardinalityString(r));
             col.add("");
 
@@ -66,10 +72,10 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
 
     private void renderAttributes(TableDocumentTable table, ClassInfo info)
     {
-        for(ClassInfo.Relation r : info.getAttributs())
+        for(Relation r : info.getAttributs())
         {
             ArrayList<String> col = new ArrayList<String>();
-            ClassInfo.Attribut a = (ClassInfo.Attribut) r;
+            Attribut a = (Attribut) r;
 
             col.add(null);
             col.add(a.name);
@@ -82,50 +88,54 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
         }
     }
 
-    private String getWertebereich(ClassInfo.Attribut a)
+    private String getWertebereich(Attribut a)
     {
-        if(a.restrictionType == ClassInfo.RestrictionType.LIT_VALUE)
+        if(a.restrictionType == RestrictionType.LIT_VALUE)
         {
-            return "{" + a.restrictionValue + "}";
+            return String.format("%s \u2208 {%s}", a.baseType, a.restrictionValue);
         }
         else
         {
-            return "";
+            return a.baseType;
         }
     }
 
-    private String getCardinalityString(ClassInfo.Relation r)
+    private String getCardinalityString(Relation r)
     {
         switch(r.restrictionType)
         {
             case SOME:
             {
-                return "[1,+" + INFINITY + ")";
+                return String.format(GREATER_EQUAL + " 1");//"[1,+" + INFINITY + ")";
             }
             case MIN:
             {
-                return "min. " + r.cardinality;
+                return String.format(GREATER_EQUAL + " ") + r.restrictionValue;
             }
             case MAX:
             {
-                return "max. " + r.cardinality;
+                return String.format(LESSER_EQUAL + " ") + r.restrictionValue;
             }
             case EXACT:
             {
-                return ""+r.cardinality;
+                return ""+r.restrictionValue;
             }
-            case ALL:
+            case LIT_VALUE:
             {
-                return "[0,+" + INFINITY + ")";
+                return "1";
+            }
+            case NOT_APPLICABLE:
+            {
+                return "";
             }
             default:    //NONE
             {
-                return "";
+                return String.format(GREATER_EQUAL + " 0");//"[1,+" + INFINITY + ")";
             }
         }
     }
 
-    private String getRangeString(ClassInfo.Relation r)
+    private String getRangeString(Relation r)
     {
         ArrayList<String> l = r.range;
         if(l == null || l.size() == 0)

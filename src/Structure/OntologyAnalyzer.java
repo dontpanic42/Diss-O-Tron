@@ -5,7 +5,11 @@ import com.hp.hpl.jena.ontology.OntClass;
 import com.hp.hpl.jena.ontology.OntDocumentManager;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.rdf.model.InfModel;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.reasoner.Reasoner;
+import com.hp.hpl.jena.reasoner.ReasonerFactory;
+import com.hp.hpl.jena.reasoner.ReasonerRegistry;
 import com.hp.hpl.jena.util.FileManager;
 
 import java.util.ArrayList;
@@ -37,6 +41,7 @@ public class OntologyAnalyzer {
         ontModel.read(FileManager.get().open(settings.ontFilename), settings.ontFiletype);
         this.settings = settings;
         this.model = ontModel;
+
     }
 
     private ArrayList<OntClass> getNamedClasses()
@@ -52,7 +57,7 @@ public class OntologyAnalyzer {
         {
             if(!o.isAnon() && o.getLocalName() != null)
             {
-                //if(!o.getLocalName().equals("Projekttyp")) continue;
+                //if(!o.getLocalName().equals("Auto")) continue;
 
                 if(counter++ >= settings.maxClasses)
                 {
@@ -87,6 +92,7 @@ public class OntologyAnalyzer {
     {
         AnalyzerEventHandler handler;
         ArrayList<OntClass> classes;
+        ClassAnalyzer ca = new ClassAnalyzer();
 
         public Analyzer(ArrayList<OntClass> classes, AnalyzerEventHandler handler)
         {
@@ -102,8 +108,11 @@ public class OntologyAnalyzer {
             ClassInfo classInfo;
             for(OntClass o : classes)
             {
+                //if(!o.getLocalName().equals("Kraftfahrer"))
+                //    continue;
+
                 //System.out.println("Reading " + (++counter) + " von " + max);
-                classInfo = new ClassInfo(o);
+                classInfo = ca.analyze(o);//new ClassInfo(o);
                 info.add(classInfo);
 
                 handler.onProgress(++counter, max, classInfo.getName());
