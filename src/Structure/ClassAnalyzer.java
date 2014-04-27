@@ -283,10 +283,19 @@ public class ClassAnalyzer {
             if(r.isAllValuesFromRestriction())
             {
                 rel.restrictionType = RestrictionType.ALL;
+                rel.cardinality = 0;
             }
             else if(r.isSomeValuesFromRestriction())
             {
                 rel.restrictionType = RestrictionType.SOME;
+                rel.cardinality = 1;
+
+                SomeValuesFromRestriction sr = r.asSomeValuesFromRestriction();
+                //System.out.println("Some Values From: " + sr.getSomeValuesFrom().getLocalName());
+                if(sr.getSomeValuesFrom().canAs(OntClass.class))
+                {
+                    rel.restrictionValue = getSimpleClassname(sr.getSomeValuesFrom().as(OntClass.class));
+                }
             }
             else if(r.isMaxCardinalityRestriction())
             {
@@ -311,10 +320,12 @@ public class ClassAnalyzer {
                 {
                     //rel.restrictionValue = "Instanz [" + n.as(Individual.class).getLocalName() + "]";
                     rel.restrictionValue = String.format("Instanz \u2208 {%s}", n.as(Individual.class).getLocalName());
+                    rel.cardinality = 1;
                 }
                 else if(n.isLiteral())
                 {
                     rel.restrictionValue = n.asLiteral().getLexicalForm();
+                    rel.cardinality = 1;
                 }
                 else
                 {
@@ -328,17 +339,17 @@ public class ClassAnalyzer {
                 if(r.hasProperty(OWL2.minQualifiedCardinality))
                 {
                     rel.restrictionType = RestrictionType.MIN;
-                    rel.restrictionValue = String.valueOf(r.getRequiredProperty(OWL2.minQualifiedCardinality).getInt());
+                    rel.cardinality = r.getRequiredProperty(OWL2.minQualifiedCardinality).getInt();
                 }
                 else if(r.hasProperty(OWL2.maxQualifiedCardinality))
                 {
                     rel.restrictionType = RestrictionType.MAX;
-                    rel.restrictionValue = String.valueOf(r.getRequiredProperty(OWL2.maxQualifiedCardinality).getInt());
+                    rel.cardinality = r.getRequiredProperty(OWL2.maxQualifiedCardinality).getInt();
                 }
                 else if(r.hasProperty(OWL2.qualifiedCardinality))
                 {
                     rel.restrictionType = RestrictionType.EXACT;
-                    rel.restrictionValue = String.valueOf(r.getRequiredProperty(OWL2.qualifiedCardinality).getInt());
+                    rel.cardinality = r.getRequiredProperty(OWL2.qualifiedCardinality).getInt();
                 }
                 else
                 {

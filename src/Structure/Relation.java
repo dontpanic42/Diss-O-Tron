@@ -12,7 +12,7 @@ public class Relation
     public ArrayList<String> range;
     public int cardinality = -1;
     public RestrictionType restrictionType = RestrictionType.NONE;
-    public String restrictionValue;
+    public String restrictionValue = null;
 
     public Relation()
     {

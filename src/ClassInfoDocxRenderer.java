@@ -19,6 +19,9 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
     public static final String GREATER_EQUAL = "≥";
     public static final String LESSER_EQUAL = "≤";
 
+    public static final String FORMAT_OBJ_WERTE_SING = "Instanz (aus der Klasse \"%s\")";
+    public static final String FORMAT_OBJ_WERTE_PLUR = "Instanzen (aus der Klasse \"%s\")";
+
     public void render(OutputSettings settings, ArrayList<ClassInfo> list)
     {
         this.settings = settings;
@@ -62,7 +65,8 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
             col.add(null);      //Merged row header
             col.add(r.name);
             col.add(getRangeString(r));
-            col.add((r.restrictionType == RestrictionType.LIT_VALUE)? r.restrictionValue : "");
+            //col.add((r.restrictionType == RestrictionType.LIT_VALUE)? r.restrictionValue : "");
+            col.add(getObjectPropertyWertebereich(r));
             col.add(getCardinalityString(r));
             col.add("");
 
@@ -88,11 +92,40 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
         }
     }
 
+    private String getObjectPropertyWertebereich(Relation r)
+    {
+        switch(r.restrictionType)
+        {
+            case LIT_VALUE:
+                return r.restrictionValue;
+            case SOME:
+                return getRangeOrValue(r, true);
+            case NOT_APPLICABLE:
+                return "";
+            case MIN:
+                return getRangeOrValue(r, true);
+            case MAX:
+                return getRangeOrValue(r, (r.cardinality > 1));
+            case EXACT:
+                return getRangeOrValue(r, (r.cardinality > 1));
+            default:
+                return getRangeOrValue(r, true);
+        }
+    }
+
+    private String getRangeOrValue(Relation r, boolean plural)
+    {
+        String fmt = (plural)? FORMAT_OBJ_WERTE_PLUR : FORMAT_OBJ_WERTE_SING;
+        return (r.restrictionValue == null)?
+                String.format(fmt, (r.range.size() == 0)? "-> ERROR: NO RANGE FOUND" : r.range.get(0)) :
+                String.format(fmt, r.restrictionValue);
+    }
+
     private String getWertebereich(Attribut a)
     {
         if(a.restrictionType == RestrictionType.LIT_VALUE)
         {
-            return String.format("%s \u2208 {%s}", a.baseType, a.restrictionValue);
+            return String.format("%s ∈ {%s}", a.baseType, a.restrictionValue);
         }
         else
         {
@@ -106,23 +139,23 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
         {
             case SOME:
             {
-                return String.format(GREATER_EQUAL + " 1");//"[1,+" + INFINITY + ")";
+                return String.format(GREATER_EQUAL + " ") + r.cardinality;//"[1,+" + INFINITY + ")";
             }
             case MIN:
             {
-                return String.format(GREATER_EQUAL + " ") + r.restrictionValue;
+                return String.format(GREATER_EQUAL + " ") + r.cardinality;
             }
             case MAX:
             {
-                return String.format(LESSER_EQUAL + " ") + r.restrictionValue;
+                return String.format(LESSER_EQUAL + " ") + r.cardinality;
             }
             case EXACT:
             {
-                return ""+r.restrictionValue;
+                return ""+r.cardinality;
             }
             case LIT_VALUE:
             {
-                return "1";
+                return ""+r.cardinality;
             }
             case NOT_APPLICABLE:
             {
