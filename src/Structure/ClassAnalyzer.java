@@ -15,8 +15,6 @@ import java.util.List;
  *
  * Known issues:
  *      - Inverse properties (without domain) are ignored
- *      - Range restrictions (hasX some y, where y is something else than range(hasX))
- *      are not displayed.
  *      - Compopound datatypes (e.g. (Euro or US-Dollar)) are ignored
  *
  */
@@ -223,10 +221,13 @@ public class ClassAnalyzer {
         String tmp;
         for(OntResource res : ocls.listSuperClasses(true).toList())
         {
-            tmp = getSuperclassName(res, info);
-            if(tmp != null)
+            if(res.getURI() == null || (res.getURI() != null && !res.getURI().equals("http://www.w3.org/2000/01/rdf-schema#Resource")))
             {
-                intersection.add(tmp);
+                tmp = getSuperclassName(res, info);
+                if(tmp != null)
+                {
+                    intersection.add(tmp);
+                }
             }
         }
 
@@ -397,6 +398,7 @@ public class ClassAnalyzer {
     {
         if(!res.isAnon())
         {
+            System.out.println("Returning " + res.getLocalName());
             return res.getLocalName();
         }
         else

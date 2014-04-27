@@ -57,7 +57,7 @@ public class OntologyAnalyzer {
         {
             if(!o.isAnon() && o.getLocalName() != null)
             {
-                //if(!o.getLocalName().equals("Auto")) continue;
+                //if(!o.getLocalName().equals("MengeVonGütern")) continue;
 
                 if(counter++ >= settings.maxClasses)
                 {
