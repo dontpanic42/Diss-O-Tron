@@ -1,6 +1,7 @@
 import Settings.OutputSettings;
 import Structure.Attribut;
 import Structure.ClassInfo;
+import Structure.InstanceInfo;
 import Structure.Relation;
 import Structure.RestrictionType;
 
@@ -22,16 +23,18 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
     public static final String FORMAT_OBJ_WERTE_SING = "Instanz (aus der Klasse \"%s\")";
     public static final String FORMAT_OBJ_WERTE_PLUR = "Instanzen (aus der Klasse \"%s\")";
 
-    public void render(OutputSettings settings, ArrayList<ClassInfo> list)
+    public void render(OutputSettings settings, ArrayList<ClassInfo> classes, ArrayList<InstanceInfo> individuals)
     {
         this.settings = settings;
+        individuals = (individuals == null)? new ArrayList<InstanceInfo>() : individuals;
         System.out.print("Initializing docx document... ");
         TableDocument doc = new TableDocument();
         System.out.println("Done.");
 
         //Structure.ClassInfo info = list.get(0);
         int counter = 0;
-        for(ClassInfo info : list)
+        int max = classes.size() + individuals.size();
+        for(ClassInfo info : classes)
         {
             TableDocumentTable table = new TableDocumentTable();
             table.setHeaderStyle(settings.headerStyle);
@@ -42,7 +45,21 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
             renderAttributes(table, info);
 
             doc.addTable(table);
-            System.out.println("Created table " + (++counter) + "/" + list.size() + ":\t" + info.getName());
+            System.out.println("Created class table " + (++counter) + "/" + max + ":\t" + info.getName());
+        }
+
+        for(InstanceInfo info : individuals)
+        {
+            TableDocumentIndividual table = new TableDocumentIndividual();
+            table.setHeaderStyle(settings.headerStyle);
+            table.setRowHeaderStyle(settings.rowHeaderStyle);
+
+            renderTableHeader(table, info);
+            renderRelations(table, info);
+            renderAttributes(table, info);
+
+            doc.addIndividual(table);
+            System.out.println("Created individual table " + (++counter) + "/" + max + ":\t" + info.getName());
         }
 
         System.out.println("Writing docx file: " + settings.filename);
@@ -55,6 +72,26 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
         String header = info.getName();
         if(info.hasEquivalentClass()) header += " (" + EQUIVALENT + " " + info.getEquivalentClass() + ")";
         table.setHeader(header);
+    }
+
+    private void renderTableHeader(TableDocumentIndividual table, InstanceInfo info)
+    {
+        String header = info.getName();
+        table.setHeader(header);
+        table.setParent(info.parentClass);
+    }
+
+    private void renderRelations(TableDocumentIndividual table, InstanceInfo info)
+    {
+        for(Relation r : info.getRelations())
+        {
+            ArrayList<String> col = new ArrayList<String>();
+            col.add(null);
+            col.add(r.name);
+            col.add(r.restrictionValue);
+
+            table.addRelation(col);
+        }
     }
 
     private void renderRelations(TableDocumentTable table, ClassInfo info)
@@ -71,6 +108,19 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
             col.add("");
 
             table.addRelation(col);
+        }
+    }
+
+    private void renderAttributes(TableDocumentIndividual table, InstanceInfo info)
+    {
+        for(Relation r : info.getAttributs())
+        {
+            ArrayList<String> col = new ArrayList<String>();
+            col.add(null);
+            col.add(r.name);
+            col.add(r.restrictionValue);
+
+            table.addAttribut(col);
         }
     }
 
@@ -125,7 +175,8 @@ public class ClassInfoDocxRenderer implements ClassInfoRenderer {
     {
         if(a.restrictionType == RestrictionType.LIT_VALUE)
         {
-            return String.format("%s ∈ {%s}", a.baseType, a.restrictionValue);
+            //return String.format("%s ∈ {%s}", a.baseType, a.restrictionValue);
+            return a.restrictionValue;
         }
         else
         {

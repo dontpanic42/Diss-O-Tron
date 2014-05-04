@@ -1,18 +1,17 @@
 package Structure;
 
 import Settings.InputSettings;
-import com.hp.hpl.jena.ontology.OntClass;
-import com.hp.hpl.jena.ontology.OntDocumentManager;
-import com.hp.hpl.jena.ontology.OntModel;
-import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.ontology.*;
 import com.hp.hpl.jena.rdf.model.InfModel;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.reasoner.Reasoner;
 import com.hp.hpl.jena.reasoner.ReasonerFactory;
 import com.hp.hpl.jena.reasoner.ReasonerRegistry;
 import com.hp.hpl.jena.util.FileManager;
+import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -25,11 +24,12 @@ public class OntologyAnalyzer {
     public interface AnalyzerEventHandler
     {
         public void onProgress(int current, int numClasses, String name);
-        public void onFinish(ArrayList<ClassInfo> list);
+        public void onFinish(ArrayList<ClassInfo> classes, ArrayList<InstanceInfo> inst);
     }
 
     private OntModel model;
     private ArrayList<OntClass> classes = null;
+    private ArrayList<Individual> individuals = null;
     private InputSettings settings;
 
     public OntologyAnalyzer(InputSettings settings)
@@ -42,6 +42,48 @@ public class OntologyAnalyzer {
         this.settings = settings;
         this.model = ontModel;
 
+    }
+
+    private ArrayList<Individual> getNamedIndividuals()
+    {
+        if(this.individuals != null)
+        {
+            return this.individuals;
+        }
+
+        ArrayList<Individual> list = new ArrayList<Individual>();
+        int counter = 0;
+        Individual i;
+        OntResource r;
+        for(OntClass o : model.listHierarchyRootClasses().toList())
+        {
+            ExtendedIterator<? extends OntResource> it = o.listInstances();
+            while(it.hasNext())
+            {
+                r = it.next();
+                if(!r.canAs(Individual.class))
+                {
+                    continue;
+                }
+
+                i = r.as(Individual.class);
+                if(!i.isAnon() && i.getLocalName() != null)
+                {
+                    if(counter++ >= settings.maxClasses)
+                    {
+                        System.err.println("Reached maximum individual count: " + settings.maxClasses + " - Ignoring rest.");
+                        break;
+                    }
+
+                    System.out.println("Scanned individual " + counter);
+
+                    list.add(i);
+                }
+            }
+        }
+
+        this.individuals = list;
+        return list;
     }
 
     private ArrayList<OntClass> getNamedClasses()
@@ -57,8 +99,6 @@ public class OntologyAnalyzer {
         {
             if(!o.isAnon() && o.getLocalName() != null)
             {
-                //if(!o.getLocalName().equals("MengeVonGütern")) continue;
-
                 if(counter++ >= settings.maxClasses)
                 {
                     System.err.println("Reached maximum class count: " + settings.maxClasses + " - Ignoring rest.");
@@ -81,7 +121,7 @@ public class OntologyAnalyzer {
     public void analyze(InputSettings ips, AnalyzerEventHandler handler)
     {
 
-        Analyzer a = new Analyzer(getNamedClasses(), handler);
+        Analyzer a = new Analyzer(getNamedClasses(), getNamedIndividuals(), handler);
         new Thread(a).start();
 
     }
@@ -92,18 +132,21 @@ public class OntologyAnalyzer {
     {
         AnalyzerEventHandler handler;
         ArrayList<OntClass> classes;
+        ArrayList<Individual> individuals;
         ClassAnalyzer ca = new ClassAnalyzer();
+        IndividualAnalyzer ia = new IndividualAnalyzer();
 
-        public Analyzer(ArrayList<OntClass> classes, AnalyzerEventHandler handler)
+        public Analyzer(ArrayList<OntClass> classes, ArrayList<Individual> individuals, AnalyzerEventHandler handler)
         {
             this.handler = handler;
             this.classes = classes;
+            this.individuals = individuals;
         }
 
         public void run()
         {
             int counter = 0;
-            int max = classes.size();
+            int max = classes.size() + individuals.size();
             ArrayList<ClassInfo> info = new ArrayList<ClassInfo>();
             ClassInfo classInfo;
             for(OntClass o : classes)
@@ -115,10 +158,20 @@ public class OntologyAnalyzer {
                 classInfo = ca.analyze(o);//new ClassInfo(o);
                 info.add(classInfo);
 
-                handler.onProgress(++counter, max, classInfo.getName());
+                handler.onProgress(++counter, max, "Klasse " + classInfo.getName());
             }
 
-            handler.onFinish(info);
+            ArrayList<InstanceInfo> indv = new ArrayList<InstanceInfo>();
+            InstanceInfo instanceInfo;
+            for(Individual i : individuals)
+            {
+                instanceInfo = ia.analyze(i);
+                indv.add(instanceInfo);
+
+                handler.onProgress(++counter, max, "Individual " + instanceInfo.getName());
+            }
+
+            handler.onFinish(info, indv);
         }
     }
 }

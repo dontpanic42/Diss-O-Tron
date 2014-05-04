@@ -2,12 +2,15 @@ import Settings.InputSettings;
 import Settings.OutputSettings;
 import Settings.SettingsStore;
 import Structure.ClassInfo;
+import Structure.InstanceInfo;
 import Structure.OntologyAnalyzer;
+import Structure.ClassInfoComparator;
 
 import javax.swing.*;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * Created by daniel on 17.04.14.
@@ -43,15 +46,20 @@ public class MainClass {
                         }
 
                         @Override
-                        public void onFinish(ArrayList<ClassInfo> list) {
+                        public void onFinish(ArrayList<ClassInfo> classes, ArrayList<InstanceInfo> instances) {
                             progress.setIndeterminate();
-                            progress.setTask("Schreibe Tabellen.");
+                            progress.setTask("Sortiere.");
 
+                            ClassInfoComparator cic = new ClassInfoComparator();
+                            Collections.sort(classes, cic);
+                            Collections.sort(instances, cic);
+
+                            progress.setTask("Schreibe Tabellen.");
 
                             try
                             {
                                 ClassInfoRenderer r = new ClassInfoDocxRenderer();
-                                r.render(output, list);
+                                r.render(output, classes, instances);
 
                                 progress.setFinished(output);
                             }

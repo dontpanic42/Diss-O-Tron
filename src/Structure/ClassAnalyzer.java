@@ -146,7 +146,7 @@ public class ClassAnalyzer {
         at.unit = "(Ohne Einheit)";
     }
 
-    private ArrayList<String> stringToList(String str)
+    protected ArrayList<String> stringToList(String str)
     {
         ArrayList<String> l = new ArrayList<String>();
         l.add(str);
@@ -196,7 +196,7 @@ public class ClassAnalyzer {
         return stringFromList(list, ClassInfo.UNION);
     }
 
-    private String getSuperclasses(OntClass ocls, ClassInfo info)
+    protected String getSuperclasses(OntClass ocls, ClassInfo info)
     {
         if(ocls.isHierarchyRoot())
         {
@@ -320,7 +320,7 @@ public class ClassAnalyzer {
                 if(n.canAs(Individual.class))
                 {
                     //rel.restrictionValue = "Instanz [" + n.as(Individual.class).getLocalName() + "]";
-                    rel.restrictionValue = String.format("Instanz \u2208 {%s}", n.as(Individual.class).getLocalName());
+                    rel.restrictionValue = String.format("Instanz \"%s\"", n.as(Individual.class).getLocalName());
                     rel.cardinality = 1;
                 }
                 else if(n.isLiteral())
@@ -398,7 +398,6 @@ public class ClassAnalyzer {
     {
         if(!res.isAnon())
         {
-            System.out.println("Returning " + res.getLocalName());
             return res.getLocalName();
         }
         else
